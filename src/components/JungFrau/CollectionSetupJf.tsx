@@ -6,9 +6,11 @@ import {
   Grid2 as Grid,
   Stack,
   TextField,
+  Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import React from "react";
 import { useContext } from "react";
 import { NumericParameterInput, ParameterInput } from "../ParameterInputs";
@@ -60,6 +62,11 @@ function RunButtons({ currentVisit }: { currentVisit: string }): JSX.Element {
 export function CollectionSetupJf() {
   const theme = useTheme();
   const context = useContext(JungfrauRotationContext);
+  // Which of the linked pair the user last drove the sweep with. The range is what the
+  // plan is sent, so that is what leads until the count is used instead.
+  const [sweepSetBy, setSweepSetBy] = React.useState<"range" | "images">(
+    "range",
+  );
   const { visit } = useContext(VisitContext);
   const currentVisit = getCurrentVisit(visit);
   const storageDirectory = fullStorageDirectory(currentVisit);
@@ -125,24 +132,48 @@ export function CollectionSetupJf() {
             tooltip="Sample id"
           />
         </Grid>
-        <Grid container spacing={2} marginTop={3} justifyContent={"center"}>
+        <Grid
+          container
+          spacing={2}
+          marginTop={3}
+          justifyContent={"center"}
+          alignItems={"center"}
+        >
           {/* The plan is given the rotation range; the image count is the same setting
-          seen through the increment, so either box can be typed into. */}
+          seen through the increment, so either box can be typed into. The one not
+          driving the pair is faded, to show which way round they are being used. */}
           <NumericParameterInput
             value={context.scanWidth}
-            onSet={context.setScanWidth}
+            onSet={(width) => {
+              setSweepSetBy("range");
+              context.setScanWidth(width);
+            }}
             label="Rotation range (deg)"
             tooltip="Total sweep of the rotation, in deg"
+            tooltipPlacement="top"
+            dimmed={sweepSetBy !== "range"}
           />
+          <Tooltip
+            title="Rotation range and number of images are two views of the same sweep, linked by the omega increment"
+            placement="top"
+          >
+            <SwapHorizIcon
+              fontSize="small"
+              sx={{ color: "text.secondary", mx: -0.5 }}
+            />
+          </Tooltip>
           <NumericParameterInput
             value={imagesInSweep(context.scanWidth, context.omegaIncrement)}
-            onSet={(images) =>
+            onSet={(images) => {
+              setSweepSetBy("images");
               context.setScanWidth(
                 sweepForImages(images, context.omegaIncrement),
-              )
-            }
+              );
+            }}
             label="Number of images"
             tooltip="Images collected over the sweep. Setting this adjusts the rotation range to match, at the current increment."
+            tooltipPlacement="top"
+            dimmed={sweepSetBy !== "images"}
           />
         </Grid>
         <Grid container spacing={2} marginTop={3} justifyContent={"center"}>
