@@ -12,6 +12,7 @@ export const JungfrauRotationProvider = ({
   const [transFract, setTransFract] = useState<number[]>([0.5]);
   const [omegaStart, setOmegaStart] = useState<number>(0);
   const [omegaIncrement, setOmegaIncrement] = useState<number>(0.1);
+  const [scanWidth, setScanWidth] = useState<number>(360);
   const [sampleId, setSampleId] = useState<number>(0);
 
   return (
@@ -23,6 +24,7 @@ export const JungfrauRotationProvider = ({
         transFract,
         omegaStart,
         omegaIncrement,
+        scanWidth,
         sampleId,
         setFileName,
         setExpTime,
@@ -30,6 +32,7 @@ export const JungfrauRotationProvider = ({
         setTransFract,
         setOmegaStart,
         setOmegaIncrement,
+        setScanWidth,
         setSampleId,
       }}
     >

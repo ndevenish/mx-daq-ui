@@ -11,8 +11,13 @@ import {
 } from "@mui/material";
 import React from "react";
 import { useContext } from "react";
-import { ParameterInput } from "../ParameterInputs";
-import { fullStorageDirectory, getCurrentVisit } from "./jfUtils";
+import { NumericParameterInput, ParameterInput } from "../ParameterInputs";
+import {
+  fullStorageDirectory,
+  getCurrentVisit,
+  imagesInSweep,
+  sweepForImages,
+} from "./jfUtils";
 
 function RunButtons({ currentVisit }: { currentVisit: string }): JSX.Element {
   const {
@@ -21,6 +26,7 @@ function RunButtons({ currentVisit }: { currentVisit: string }): JSX.Element {
     fileName,
     omegaStart,
     omegaIncrement,
+    scanWidth,
     transFract,
     sampleId,
   } = useContext(JungfrauRotationContext);
@@ -35,6 +41,7 @@ function RunButtons({ currentVisit }: { currentVisit: string }): JSX.Element {
             exposure_time_s: expTime,
             omega_start_deg: omegaStart,
             omega_increment_deg: omegaIncrement,
+            scan_width_deg: scanWidth,
             det_distance_mm: detDist,
             filename: fileName,
             transmissions: transFract,
@@ -99,13 +106,13 @@ export function CollectionSetupJf() {
           />
         </Grid>
         <Grid container spacing={2} marginTop={3} justifyContent={"center"}>
-          <ParameterInput
+          <NumericParameterInput
             value={context.omegaStart}
             onSet={context.setOmegaStart}
             label="Omega start (deg)"
             tooltip="Rotation start value, in deg"
           />
-          <ParameterInput
+          <NumericParameterInput
             value={context.omegaIncrement}
             onSet={context.setOmegaIncrement}
             label="Omega increment (deg)"
@@ -116,6 +123,26 @@ export function CollectionSetupJf() {
             onSet={context.setSampleId}
             label="Sample ID"
             tooltip="Sample id"
+          />
+        </Grid>
+        <Grid container spacing={2} marginTop={3} justifyContent={"center"}>
+          {/* The plan is given the rotation range; the image count is the same setting
+          seen through the increment, so either box can be typed into. */}
+          <NumericParameterInput
+            value={context.scanWidth}
+            onSet={context.setScanWidth}
+            label="Rotation range (deg)"
+            tooltip="Total sweep of the rotation, in deg"
+          />
+          <NumericParameterInput
+            value={imagesInSweep(context.scanWidth, context.omegaIncrement)}
+            onSet={(images) =>
+              context.setScanWidth(
+                sweepForImages(images, context.omegaIncrement),
+              )
+            }
+            label="Number of images"
+            tooltip="Images collected over the sweep. Setting this adjusts the rotation range to match, at the current increment."
           />
         </Grid>
         <Grid container spacing={2} marginTop={3} justifyContent={"center"}>
