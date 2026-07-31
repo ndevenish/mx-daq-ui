@@ -1,5 +1,5 @@
 import { it, describe, expect } from "vitest";
-import { imagesInSweep, sweepForImages } from "./jfUtils";
+import { imagesInSweep, parseTransmissions, sweepForImages } from "./jfUtils";
 
 describe("imagesInSweep", () => {
   it.each([
@@ -71,5 +71,41 @@ describe("sweepForImages", () => {
         ).toBe(images);
       }
     }
+  });
+});
+
+describe("parseTransmissions", () => {
+  it.each([
+    ["0.5", [0.5]],
+    ["0.3, 0.5", [0.3, 0.5]],
+    ["  0.3 ,0.5 , 0.7 ", [0.3, 0.5, 0.7]],
+    // The bounds are inclusive, matching the validator on the plan's params.
+    ["0", [0]],
+    ["1", [1]],
+  ])("reads %s as %j", (entered, expected) => {
+    expect(parseTransmissions(entered).values).toEqual(expected);
+  });
+
+  it.each(["1.5", "-0.1", "0.5, 2", "100"])(
+    "rejects a value outside 0 to 1: %s",
+    (entered) => {
+      const parsed = parseTransmissions(entered);
+      expect(parsed.values).toBeUndefined();
+      expect(parsed.error).toMatch(/between 0 and 1/);
+    },
+  );
+
+  it.each(["", "   ", ","])("rejects an empty entry: %s", (entered) => {
+    expect(parseTransmissions(entered).error).toBeDefined();
+  });
+
+  it.each(["half", "0.3, abc"])("rejects a non-number: %s", (entered) => {
+    const parsed = parseTransmissions(entered);
+    expect(parsed.values).toBeUndefined();
+    expect(parsed.error).toMatch(/not a number/);
+  });
+
+  it("names the offending value so it can be found in a list", () => {
+    expect(parseTransmissions("0.3, 4, 0.5").error).toContain("4");
   });
 });
