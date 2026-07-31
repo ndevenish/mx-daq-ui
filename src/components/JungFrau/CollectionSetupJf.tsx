@@ -35,7 +35,7 @@ function RunButtons({ currentVisit }: { currentVisit: string }): JSX.Element {
             exposure_time_s: expTime,
             omega_start_deg: omegaStart,
             omega_increment_deg: omegaIncrement,
-            detector_distance_mm: detDist,
+            det_distance_mm: detDist,
             filename: fileName,
             transmissions: transFract,
             sample_id: sampleId,
