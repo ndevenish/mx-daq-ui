@@ -1,4 +1,4 @@
-import { TextField, Tooltip } from "@mui/material";
+import { TextField, Tooltip, TooltipProps } from "@mui/material";
 import React from "react";
 
 interface InputProps<T> {
@@ -27,6 +27,10 @@ interface NumericInputProps {
   onSet: (value: number) => void;
   label: string;
   tooltip?: string;
+  /** Where the tooltip sits. "left" covers the neighbouring box in a row of fields. */
+  tooltipPlacement?: TooltipProps["placement"];
+  /** Shown faded, for a value that is following another field rather than leading it. */
+  dimmed?: boolean;
 }
 
 /** A number box whose contents can also be changed by something other than typing in it.
@@ -49,7 +53,10 @@ export function NumericParameterInput(props: NumericInputProps) {
   };
 
   return (
-    <Tooltip title={props.tooltip ? props.tooltip : ""} placement="left">
+    <Tooltip
+      title={props.tooltip ? props.tooltip : ""}
+      placement={props.tooltipPlacement ?? "left"}
+    >
       <TextField
         size="small"
         label={props.label}
@@ -59,6 +66,9 @@ export function NumericParameterInput(props: NumericInputProps) {
         // used, which a linked field may have adjusted.
         onBlur={() => setDraft(null)}
         style={{ width: 180 }}
+        // Faded rather than disabled: the value is still true and still editable, it is
+        // just not the one currently driving the pair.
+        sx={props.dimmed ? { opacity: 0.55 } : undefined}
       />
     </Tooltip>
   );

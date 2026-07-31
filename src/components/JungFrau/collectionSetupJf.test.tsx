@@ -90,6 +90,39 @@ describe("JF rotation range and image count", () => {
     expect(box(IMAGES).value).toBe("1800");
   });
 
+  /** The faded field is the one following the other, so read the opacity MUI applied. */
+  function fadedness(label: string): string {
+    const field = box(label).closest(".MuiFormControl-root");
+    return window.getComputedStyle(field as Element).opacity;
+  }
+
+  it("fades the image count while the range is the one being set", () => {
+    expect(fadedness(RANGE)).toBe("");
+    expect(fadedness(IMAGES)).toBe("0.55");
+  });
+
+  it("swaps which field is faded when the image count is used instead", async () => {
+    await retype(IMAGES, "1000");
+    expect(fadedness(IMAGES)).toBe("");
+    expect(fadedness(RANGE)).toBe("0.55");
+  });
+
+  it("swaps back when the range is used again", async () => {
+    await retype(IMAGES, "1000");
+    await retype(RANGE, "45");
+    expect(fadedness(RANGE)).toBe("");
+    expect(fadedness(IMAGES)).toBe("0.55");
+  });
+
+  it("puts the coupled fields' tooltips above them, clear of their neighbours", async () => {
+    // These sit side by side, and the default "left" placement puts the image count's
+    // tooltip straight over the rotation range box next to it.
+    const user = userEvent.setup();
+    await user.hover(box(IMAGES));
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.getAttribute("data-popper-placement")).toBe("top");
+  });
+
   it("gives back the image count that was asked for", async () => {
     // 43 * 0.05 is 2.1500000000000004, and 2.15 / 0.05 is 42.99999999999999, so a
     // round trip through the range is where an off-by-one would show up.
