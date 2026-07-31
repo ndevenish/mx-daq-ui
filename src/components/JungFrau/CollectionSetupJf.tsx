@@ -18,10 +18,18 @@ import {
   fullStorageDirectory,
   getCurrentVisit,
   imagesInSweep,
+  parseTransmissions,
   sweepForImages,
 } from "./jfUtils";
 
-function RunButtons({ currentVisit }: { currentVisit: string }): JSX.Element {
+function RunButtons({
+  currentVisit,
+  blockedReason,
+}: {
+  currentVisit: string;
+  /** Why the plan cannot be run, if it cannot; shown in place of the usual tooltip. */
+  blockedReason?: string;
+}): JSX.Element {
   const {
     expTime,
     detDist,
@@ -50,7 +58,8 @@ function RunButtons({ currentVisit }: { currentVisit: string }): JSX.Element {
             sample_id: sampleId,
           }}
           currentVisit={currentVisit}
-          title="Run the jungfrau rotation scan plan"
+          title={blockedReason ?? "Run the jungfrau rotation scan plan"}
+          disabled={blockedReason !== undefined}
           btnSize="large"
         />
         <AbortButton />
@@ -67,6 +76,20 @@ export function CollectionSetupJf() {
   const [sweepSetBy, setSweepSetBy] = React.useState<"range" | "images">(
     "range",
   );
+  // Kept as text so a rejected entry stays on screen to be corrected, rather than
+  // silently leaving the last good value in place to be collected with.
+  const [transmissionText, setTransmissionText] = React.useState<string>(
+    context.transFract.join(", "),
+  );
+  const transmissions = parseTransmissions(transmissionText);
+
+  const handleTransmissionChange = (entered: string) => {
+    setTransmissionText(entered);
+    const parsed = parseTransmissions(entered);
+    if (parsed.values) {
+      context.setTransFract(parsed.values);
+    }
+  };
   const { visit } = useContext(VisitContext);
   const currentVisit = getCurrentVisit(visit);
   const storageDirectory = fullStorageDirectory(currentVisit);
@@ -177,14 +200,25 @@ export function CollectionSetupJf() {
           />
         </Grid>
         <Grid container spacing={2} marginTop={3} justifyContent={"center"}>
-          <ParameterInput
-            value={context.transFract}
-            onSet={context.setTransFract}
-            label="Transmission (fraction)"
-            tooltip="Request transmission value(s) for collection, expressed as a fraction. If running a single rotation, just input one value, if running multiples please pass a list."
-          />
+          <Tooltip
+            title="Request transmission value(s) for collection, expressed as a fraction between 0 and 1. If running a single rotation, just input one value, if running multiples separate them with commas."
+            placement="top"
+          >
+            <TextField
+              size="small"
+              label="Transmission (fraction)"
+              value={transmissionText}
+              onChange={(e) => handleTransmissionChange(e.target.value)}
+              error={transmissions.error !== undefined}
+              helperText={transmissions.error}
+              style={{ width: 380 }}
+            />
+          </Tooltip>
         </Grid>
-        <RunButtons currentVisit={currentVisit} />
+        <RunButtons
+          currentVisit={currentVisit}
+          blockedReason={transmissions.error}
+        />
       </Stack>
     </Box>
   );

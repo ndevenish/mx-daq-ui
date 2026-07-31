@@ -32,6 +32,43 @@ export function sweepForImages(images: number, incrementDeg: number): number {
   return trimFloatNoise(images * incrementDeg);
 }
 
+/** What the transmission box currently holds: usable values, or why they are not. */
+export type ParsedTransmissions =
+  | { values: number[]; error?: undefined }
+  | { values?: undefined; error: string };
+
+/** Read the transmission box: one fraction, or several separated by commas.
+ *
+ * The bounds match the validator on ExternalRotationScanParams, which rejects anything
+ * outside 0 to 1. Catching it here makes it a message next to the box rather than a 422
+ * from blueapi after the plan has been submitted.
+ */
+export function parseTransmissions(entered: string): ParsedTransmissions {
+  const parts = entered
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part !== "");
+
+  if (parts.length === 0) {
+    return { error: "Enter a transmission between 0 and 1" };
+  }
+
+  const values: number[] = [];
+  for (const part of parts) {
+    const value = Number(part);
+    if (!Number.isFinite(value)) {
+      return { error: `"${part}" is not a number` };
+    }
+    if (value < 0 || value > 1) {
+      return {
+        error: `Transmission is a fraction: ${part} is not between 0 and 1`,
+      };
+    }
+    values.push(value);
+  }
+  return { values };
+}
+
 /** Drop the floating point tail from a computed value, so a box reads 2.15 not 2.1500000000000004. */
 export function trimFloatNoise(value: number): number {
   return Number(value.toPrecision(12));

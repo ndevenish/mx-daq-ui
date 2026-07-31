@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { it, describe, vi, expect, beforeEach, afterEach } from "vitest";
@@ -8,8 +8,15 @@ import { CollectionSetupJf } from "./CollectionSetupJf";
 import { JungfrauRotationProvider } from "#/context/jungfrau/JungfrauRotationProvider";
 import { VisitContext } from "#/context/VisitContext";
 
-/** The form polls blueapi through its run button; none of that is under test here. */
+/** The form polls blueapi through its run button; none of that is under test here.
+ *
+ * The plan has to be in the list and the worker idle, or the button is disabled for
+ * reasons of its own and any assertion that it is disabled proves nothing.
+ */
 function stubBlueapi() {
+  const plans = {
+    plans: [{ name: "gui_run_jf_rotation_scan", schema: { properties: {} } }],
+  };
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string) =>
@@ -18,9 +25,7 @@ function stubBlueapi() {
         status: 200,
         statusText: "OK",
         json: () =>
-          Promise.resolve(
-            String(url).endsWith("/plans") ? { plans: [] } : "IDLE",
-          ),
+          Promise.resolve(String(url).endsWith("/plans") ? plans : "IDLE"),
       }),
     ),
   );
@@ -130,5 +135,74 @@ describe("JF rotation range and image count", () => {
     await retype(IMAGES, "43");
     expect(box(IMAGES).value).toBe("43");
     expect(box(RANGE).value).toBe("2.15");
+  });
+});
+
+const TRANSMISSION = "Transmission (fraction)";
+
+function runButton() {
+  return screen.getByRole("button", { name: /Run rotation scan/ });
+}
+
+describe("JF rotation transmission", () => {
+  beforeEach(() => {
+    stubBlueapi();
+    render(<CollectionSetupJf />, { wrapper });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("accepts a single fraction", async () => {
+    await retype(TRANSMISSION, "0.3");
+    // Matched narrowly: the field's own tooltip also mentions 0 and 1.
+    expect(
+      screen.queryByText(/is not between 0 and 1/),
+    ).not.toBeInTheDocument();
+    await waitFor(() => expect(runButton()).toBeEnabled());
+  });
+
+  it("accepts several fractions for a multi-transmission collection", async () => {
+    await retype(TRANSMISSION, "0.1, 0.5, 1");
+    // Matched narrowly: the field's own tooltip also mentions 0 and 1.
+    expect(
+      screen.queryByText(/is not between 0 and 1/),
+    ).not.toBeInTheDocument();
+    await waitFor(() => expect(runButton()).toBeEnabled());
+  });
+
+  it.each(["1.5", "-0.2"])("says why %s is not a transmission", async (bad) => {
+    await retype(TRANSMISSION, bad);
+    expect(screen.getByText(/is not between 0 and 1/)).toBeInTheDocument();
+  });
+
+  it("will not run a plan with a transmission outside 0 to 1", async () => {
+    // Blocked at the button rather than left to blueapi: a 422 arrives after the task
+    // has been submitted, and says nothing about which box was wrong.
+    await retype(TRANSMISSION, "5");
+    expect(runButton()).toBeDisabled();
+  });
+
+  it("submits no task while the transmission is out of range", async () => {
+    await retype(TRANSMISSION, "5");
+    await userEvent.click(runButton(), { pointerEventsCheck: 0 });
+    const fetchMock = vi.mocked(fetch);
+    expect(
+      fetchMock.mock.calls.filter(
+        ([url, init]) =>
+          String(url).endsWith("/tasks") &&
+          ((init as RequestInit | undefined)?.method ?? "GET") === "POST",
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("runs again once the transmission is corrected", async () => {
+    await retype(TRANSMISSION, "5");
+    expect(runButton()).toBeDisabled();
+    await retype(TRANSMISSION, "0.5");
+    await waitFor(() => expect(runButton()).toBeEnabled());
   });
 });
