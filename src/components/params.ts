@@ -1,3 +1,6 @@
+// Must match DetectorName in mx-bluesky, which is what the plans take.
+export const detectors = ["eiger", "jungfrau"];
+
 export const chipTypes = ["Oxford", "OxfordInner", "Custom", "MISP"];
 
 export const MapTypes = ["Full Chip", "Lite"];

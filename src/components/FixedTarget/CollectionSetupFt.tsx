@@ -13,7 +13,8 @@ import { PumpProbeOptions } from "./PumpProbeComponents";
 import { MapView } from "./FixedTargetMapComponents";
 import { RunPlanButton, AbortButton } from "#/blueapi/BlueapiComponents.tsx";
 import { ParameterInput } from "../ParameterInputs";
-import { pumpProbeMode, chipTypes, MapTypes } from "../params";
+import { pumpProbeMode, chipTypes, MapTypes, detectors } from "../params";
+import { DetectorSelection } from "../DetectorSelection";
 
 type ParametersProps = {
   subDir: string;
@@ -28,6 +29,7 @@ type ParametersProps = {
   checkerPattern: boolean;
   pumpProbe: string;
   pumpInputs: number[];
+  detector: string;
 };
 
 /**
@@ -58,6 +60,7 @@ function RunButtons(props: ParametersProps) {
             laser_dwell: props.pumpInputs[0],
             laser_delay: props.pumpInputs[1],
             pre_pump: props.pumpInputs[2],
+            detector: props.detector,
           }}
           title="Start fixed target collection"
           btnSize="large"
@@ -85,6 +88,7 @@ export function CollectionSetupFt() {
 
   const [mapType, setMapType] = React.useState<string>(MapTypes[0]);
   const [chipFormat, setChipFormat] = React.useState<number[]>([]);
+  const [detector, setDetector] = React.useState<string>(detectors[0]);
 
   return (
     <Box sx={{ flexGrow: 1, marginRight: 10, marginLeft: 10 }}>
@@ -184,6 +188,7 @@ export function CollectionSetupFt() {
                 </Select>
               </FormControl>
             </Tooltip>
+            <DetectorSelection detector={detector} setDetector={setDetector} />
             <MapView
               chipType={chipType}
               mapType={mapType}
@@ -206,6 +211,7 @@ export function CollectionSetupFt() {
           checkerPattern={checkerPattern.valueOf()}
           pumpProbe={pumpProbe}
           pumpInputs={[laserDwell, laserDelay, prePump]}
+          detector={detector}
         />
       </Grid2>
     </Box>
