@@ -7,6 +7,8 @@ import {
 } from "./PumpProbeSelection";
 import { RunPlanButton, AbortButton } from "#/blueapi/BlueapiComponents.tsx";
 import { ParameterInput } from "../ParameterInputs";
+import { DetectorSelection } from "../DetectorSelection";
+import { detectors } from "../params";
 
 /**Main collection input window for the extruderpanel. */
 export function CollectionSetupEx() {
@@ -19,6 +21,7 @@ export function CollectionSetupEx() {
   const [pumpProbe, setPumpProbe] = React.useState<boolean>(false);
   const [laserDwell, setLaserDwell] = React.useState<number>(0);
   const [laserDelay, setLaserDelay] = React.useState<number>(0);
+  const [detector, setDetector] = React.useState<string>(detectors[0]);
 
   return (
     <Box sx={{ flexGrow: 1, marginRight: 10, marginLeft: 10 }}>
@@ -61,6 +64,7 @@ export function CollectionSetupEx() {
               label="Detector Distance (mm)"
               tooltip="Distance to move the detector y stage to, in millimeters"
             />
+            <DetectorSelection detector={detector} setDetector={setDetector} />
           </Stack>
         </Grid2>
         <Grid2 size={3}>
@@ -110,6 +114,7 @@ export function CollectionSetupEx() {
                 pump_probe: pumpProbe,
                 laser_dwell: laserDwell,
                 laser_delay: laserDelay,
+                detector: detector,
               }}
               title="Start extruder collection"
               btnSize="large"
