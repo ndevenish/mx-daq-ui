@@ -10,7 +10,6 @@ export type JungfrauRotationContextType = {
   /** The sweep, in degrees. With the increment this fixes how many images are collected;
    * there is no separate image count to keep in step with it. */
   scanWidth: number;
-  sampleId: number;
   setFileName: React.Dispatch<React.SetStateAction<string>>;
   setExpTime: React.Dispatch<React.SetStateAction<number>>;
   setDetDist: React.Dispatch<React.SetStateAction<number>>;
@@ -18,7 +17,6 @@ export type JungfrauRotationContextType = {
   setOmegaStart: React.Dispatch<React.SetStateAction<number>>;
   setOmegaIncrement: React.Dispatch<React.SetStateAction<number>>;
   setScanWidth: React.Dispatch<React.SetStateAction<number>>;
-  setSampleId: React.Dispatch<React.SetStateAction<number>>;
 };
 
 export const JungfrauRotationContext =
