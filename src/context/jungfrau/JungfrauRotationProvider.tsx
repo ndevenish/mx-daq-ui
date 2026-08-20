@@ -13,7 +13,6 @@ export const JungfrauRotationProvider = ({
   const [omegaStart, setOmegaStart] = useState<number>(0);
   const [omegaIncrement, setOmegaIncrement] = useState<number>(0.1);
   const [scanWidth, setScanWidth] = useState<number>(360);
-  const [sampleId, setSampleId] = useState<number>(0);
 
   return (
     <JungfrauRotationContext.Provider
@@ -25,7 +24,6 @@ export const JungfrauRotationProvider = ({
         omegaStart,
         omegaIncrement,
         scanWidth,
-        sampleId,
         setFileName,
         setExpTime,
         setDetDist,
@@ -33,7 +31,6 @@ export const JungfrauRotationProvider = ({
         setOmegaStart,
         setOmegaIncrement,
         setScanWidth,
-        setSampleId,
       }}
     >
       {children}

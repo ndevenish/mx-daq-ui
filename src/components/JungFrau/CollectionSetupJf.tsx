@@ -38,7 +38,6 @@ function RunButtons({
     omegaIncrement,
     scanWidth,
     transFract,
-    sampleId,
   } = useContext(JungfrauRotationContext);
   return (
     <React.Fragment>
@@ -54,7 +53,6 @@ function RunButtons({
             det_distance_mm: detDist,
             filename: fileName,
             transmissions: transFract,
-            sample_id: sampleId,
           }}
           currentVisit={currentVisit}
           title={blockedReason ?? "Run the jungfrau rotation scan plan"}
@@ -146,12 +144,6 @@ export function CollectionSetupJf() {
             onSet={context.setOmegaIncrement}
             label="Omega increment (deg)"
             tooltip="Rotation increment step, in deg"
-          />
-          <ParameterInput
-            value={context.sampleId}
-            onSet={context.setSampleId}
-            label="Sample ID"
-            tooltip="Sample id"
           />
         </Grid>
         <Grid
