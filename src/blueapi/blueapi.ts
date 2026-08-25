@@ -314,6 +314,21 @@ function fetchPlans(): Promise<BlueApiPlan[]> {
   });
 }
 
+function fetchDeviceNames(): Promise<string[]> {
+  return blueApiCall("/devices").then((res) => {
+    if (!res.ok) {
+      throw new Error(
+        `Unable to fetch devices, response error ${res.status} ${res.statusText}`,
+      );
+    }
+    return res
+      .json()
+      .then((body) =>
+        (body["devices"] ?? []).map((device: { name: string }) => device.name),
+      );
+  });
+}
+
 /** Check, before a plan is submitted, that blueapi knows it, has its devices, and is free.
  *
  * An empty device enum means blueapi failed to connect that device at startup, so
@@ -322,13 +337,25 @@ function fetchPlans(): Promise<BlueApiPlan[]> {
  *
  * `awaitingChange` is for a caller that has just submitted a plan and is waiting for the
  * worker to report it; see useWorkerState.
+ *
+ * `requiredDevices` names devices the plan needs that its schema does not mention. A
+ * plan taking a composite (`composite: RotationScanComposite = inject()`) has its
+ * devices hidden from the schema entirely - blueapi wraps the parameter in
+ * SkipJsonSchema - so the only way to know they are missing before submitting is to
+ * name them here and check them against /devices.
  */
 export function usePlanReadiness(
   planName: string,
   awaitingChange: boolean = false,
+  requiredDevices: string[] = [],
 ): PlanReadiness {
   const { data, status } = useQuery("BlueApiPlans", fetchPlans, {
     refetchInterval: PLAN_POLL_MILLIS,
+  });
+  const devices = useQuery("BlueApiDevices", fetchDeviceNames, {
+    refetchInterval: PLAN_POLL_MILLIS,
+    // Nothing to check, so do not make every button poll a second endpoint.
+    enabled: requiredDevices.length > 0,
   });
   const workerState = useWorkerState(awaitingChange);
   const workerBusy = isWorkerBusy(workerState);
@@ -367,6 +394,16 @@ export function usePlanReadiness(
   const missingDevices = Object.entries(plan.schema?.properties ?? {})
     .filter(([, param]) => isDeviceParam(param) && param.enum?.length === 0)
     .map(([name]) => name);
+
+  // Same reasoning as /plans above: only fault a named device once /devices has
+  // actually answered, so an unreachable endpoint does not disable the beamline.
+  if (devices.status === "success" && devices.data !== undefined) {
+    for (const name of requiredDevices) {
+      if (!devices.data.includes(name) && !missingDevices.includes(name)) {
+        missingDevices.push(name);
+      }
+    }
+  }
 
   if (missingDevices.length > 0) {
     return {

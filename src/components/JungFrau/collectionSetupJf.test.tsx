@@ -10,24 +10,33 @@ import { VisitContext } from "#/context/VisitContext";
 
 /** The form polls blueapi through its run button; none of that is under test here.
  *
- * The plan has to be in the list and the worker idle, or the button is disabled for
- * reasons of its own and any assertion that it is disabled proves nothing.
+ * The plan has to be in the list, the detector connected and the worker idle, or the
+ * button is disabled for reasons of its own and any assertion that it is disabled
+ * proves nothing.
  */
 function stubBlueapi() {
   const plans = {
     plans: [{ name: "gui_run_jf_rotation_scan", schema: { properties: {} } }],
   };
+  const devices = { devices: [{ name: "jungfrau" }] };
   vi.stubGlobal(
     "fetch",
-    vi.fn((url: string) =>
-      Promise.resolve({
+    vi.fn((url: string) => {
+      const endpoint = String(url);
+      return Promise.resolve({
         ok: true,
         status: 200,
         statusText: "OK",
         json: () =>
-          Promise.resolve(String(url).endsWith("/plans") ? plans : "IDLE"),
-      }),
-    ),
+          Promise.resolve(
+            endpoint.endsWith("/plans")
+              ? plans
+              : endpoint.endsWith("/devices")
+                ? devices
+                : "IDLE",
+          ),
+      });
+    }),
   );
 }
 

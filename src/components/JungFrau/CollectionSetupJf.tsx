@@ -46,6 +46,9 @@ function RunButtons({
         <RunPlanButton
           btnLabel="Run rotation scan"
           planName="gui_run_jf_rotation_scan"
+          // The plan takes its devices as an injected composite, which blueapi keeps
+          // out of the published schema, so the detector has to be named to be checked.
+          requiredDevices={["jungfrau"]}
           planParams={{
             exposure_time_s: expTime,
             omega_start_deg: omegaStart,
