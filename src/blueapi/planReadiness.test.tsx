@@ -69,28 +69,59 @@ const PLANS_RESPONSE = {
         type: "object",
       },
     },
+    {
+      // A plan taking an injected composite: blueapi wraps the parameter in
+      // SkipJsonSchema, so not one of its fifteen devices appears here.
+      name: "gui_run_jf_rotation_scan",
+      schema: {
+        additionalProperties: false,
+        properties: {
+          filename: { title: "Filename", type: "string" },
+          exposure_time_s: { title: "Exposure Time S", type: "number" },
+        },
+        required: ["filename", "exposure_time_s"],
+        title: "gui_run_jf_rotation_scan",
+        type: "object",
+      },
+    },
   ],
 };
 
-/** Stub fetch for both endpoints usePlanReadiness consults: /plans and /worker/state. */
+/** Stub fetch for the endpoints usePlanReadiness consults: /plans, /devices and
+ * /worker/state. */
 function mockBlueapiFetch(
   plansBody: object,
   workerState: string = "IDLE",
   plansOk = true,
+  deviceNames: string[] = [],
+  devicesOk = true,
 ) {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string) => {
       const isPlans = url.endsWith("/plans");
-      const ok = isPlans ? plansOk : true;
+      const isDevices = url.endsWith("/devices");
+      const ok = isPlans ? plansOk : isDevices ? devicesOk : true;
+      const body = isPlans
+        ? plansBody
+        : isDevices
+          ? { devices: deviceNames.map((name) => ({ name })) }
+          : workerState;
       return Promise.resolve({
         ok: ok,
         status: ok ? 200 : 500,
         statusText: ok ? "OK" : "Internal Server Error",
-        json: () => Promise.resolve(isPlans ? plansBody : workerState),
+        json: () => Promise.resolve(body),
       });
     }),
   );
+}
+
+/** Did anything ask blueapi for its device list? */
+function fetchedDevices(): boolean {
+  return vi
+    .mocked(fetch)
+    .mock.calls.some(([url]) => String(url).endsWith("/devices"));
 }
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -198,6 +229,56 @@ describe("usePlanReadiness", () => {
     expect(result.current.reason).toBe(
       "The blueapi worker has panicked and needs restarting",
     );
+  });
+
+  it("blocks a plan whose named device is missing from the device list", async () => {
+    // The rotation plan's schema mentions no devices at all, so naming the detector is
+    // the only thing standing between the operator and a 422 on submit.
+    mockBlueapiFetch(PLANS_RESPONSE, "IDLE", true, ["vgonio", "zebra"]);
+    const { result } = renderHook(
+      () => usePlanReadiness("gui_run_jf_rotation_scan", false, ["jungfrau"]),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.runnable).toBe(false));
+    expect(result.current.reason).toBe("Not connected in blueapi: jungfrau");
+  });
+
+  it("allows a plan whose named device is connected", async () => {
+    mockBlueapiFetch(PLANS_RESPONSE, "IDLE", true, ["jungfrau", "vgonio"]);
+    const { result } = renderHook(
+      () => usePlanReadiness("gui_run_jf_rotation_scan", false, ["jungfrau"]),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.runnable).toBe(true));
+    expect(result.current.reason).toBeUndefined();
+  });
+
+  it("allows the plan through if the device list cannot be fetched", async () => {
+    mockBlueapiFetch(PLANS_RESPONSE, "IDLE", true, [], false);
+    const { result } = renderHook(
+      () => usePlanReadiness("gui_run_jf_rotation_scan", false, ["jungfrau"]),
+      { wrapper },
+    );
+    await waitFor(() => expect(fetchedDevices()).toBe(true));
+    expect(result.current.runnable).toBe(true);
+  });
+
+  it("names a device once when the schema already reports it missing", async () => {
+    mockBlueapiFetch(PLANS_RESPONSE, "IDLE", true, ["vgonio"]);
+    const { result } = renderHook(
+      () => usePlanReadiness("do_pedestal_darks", false, ["jungfrau"]),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.runnable).toBe(false));
+    expect(result.current.reason).toBe("Not connected in blueapi: jungfrau");
+  });
+
+  it("does not ask for the device list when no device is named", async () => {
+    const { result } = renderHook(() => usePlanReadiness("block_check"), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.runnable).toBe(true));
+    expect(fetchedDevices()).toBe(false);
   });
 
   it("allows a runnable plan while the worker is idle", async () => {

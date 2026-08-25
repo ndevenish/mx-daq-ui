@@ -33,6 +33,8 @@ type RunPlanButtonProps = {
   btnLabel: string | ReactNode;
   planName: string;
   planParams?: object;
+  /** Devices this plan needs that its blueapi schema does not list; see usePlanReadiness. */
+  requiredDevices?: string[];
   currentVisit?: string;
   title?: string;
   btnVariant?: VariantChoice;
@@ -69,7 +71,11 @@ export function RunPlanButton(props: RunPlanButtonProps) {
 
   // While this button's plan is in flight the worker state is about to change, so ask
   // for it often; the rest of the time a slow poll is enough.
-  const readiness = usePlanReadiness(props.planName, inProgress);
+  const readiness = usePlanReadiness(
+    props.planName,
+    inProgress,
+    props.requiredDevices,
+  );
 
   const refreshWorkerState = useRefreshWorkerState();
 
